@@ -1,0 +1,42 @@
+1. 請實作下列需求
+
+    (code)
+
+
+
+2. 上面程式或規格可能存在什麼潛在問題？還可以怎樣優化？
+
+    a. 不清楚 Lottery 完整的 property 以及 method 清單，像是 property 是否可以直接取用還是應該用 getter 只能靠猜測
+    b. xxxx::getWinningNumber() 不知道 output 的型態，無法在第一時間作型態檢查
+    c. xxxx::getWinningNumber() 取不到號時原本的 try-catch 只會顯示 'Something went wrong.'，應該使用 Exception 有意義的 message，甚至可以設計不同類型的 Exception 或 Error 來做不同的警示或處理
+    d. PSR2 要求每個 class 都需要 namespace，雖然很蠢，可是如果沒加上 global namespace，有些檢查器會判定有錯
+    e. __construct 前面應該加上 'function' 關鍵字
+    f. 執行的結果或許應該想辦法紀錄時間及號源
+
+
+
+3. 如果要加入第三家號源，會怎麼進行擴充？
+
+    先實作好一個 extend BaseSource 的 class 並根據規格寫好各項設定以及 response 的解析器，接著在 codeMapTrait 內依據各種 gameId 寫好彩種 key 的設定，在這裡 trait 只被當作設定檔
+    如果是要增加彩種，則只要在 codeMapTrait 新增彩種在各個彩源對應的 key 就好
+
+
+
+4. 每個號源有不同的速率限制，會如何實現限流，防止被 ban？
+
+    可以用靜態檔案紀錄各個號源每次抓取的時間戳記，然後在各個 source 的 class 內定義休息的時間，最後再修改 BaseSource 內 getResult() 的邏輯，加上如果距離上次抓取時間尚未超過休息的時間、就先 usleep() 再執行動作，如果已經超過休息時間或是休息時間為 0，則直接執行，而在回傳結果之前，則需要更新抓取的時間戳記
+
+
+
+5. 開獎時間並非準時，您會如何實現重試機制？
+
+    在 xxxx 的 getWinningNumber() 內加工，將最後丟出 FetchFailureException 之外的流程包進一個迴圈內，每執行完一圈就休息一段時間，直到重試次數達到限制或是有取得結果時再看狀況結束迴圈或是回傳結果
+
+
+
+6. 可以實現哪些手段來減少程式運行時間？
+
+    a. 使用 workerman 來執行 cron job，就我的理解，他的架構類似 swoole，使用長駐來處理 process，可以比 php-fpm 更減少一段啟動 PHP 的動作
+    b. 放棄框架，使用原生的 PHP 來完成 cron job 腳本
+    c. 使用 APC 等機制 cache binary code
+    d. 如果只是想要快速觸發動作，可以用 resque 或是其他 queue-worker 的機制來觸發動作，後續的動作交給 worker 來完成
